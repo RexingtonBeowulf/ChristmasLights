@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Christmas Lights Music Visualizer 🎄✨</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            background: #000;
+            font-family: Arial, sans-serif;
+            color: white;
+            overflow: hidden;
+        }
+        #mainContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        #bgImage {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            object-fit: contain;
+            opacity: 0.85;
+            z-index: 1;
+        }
+        canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 2;
+            cursor: crosshair;
+        }
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+            max-width: 320px;
+            z-index: 3;
+            transition: opacity 0.5s;
+            pointer-events: auto;
+        }
+        #controls.hidden { opacity: 0; pointer-events: none; }
+        h1 {
+            margin: 0 0 15px 0;
+            text-align: center;
+            text-shadow: 0 0 10px #ff0000;
+            font-size: 1.5em;
+        }
+        select, button, input {
+            display: block;
+            margin: 10px 0;
+            padding: 8px;
+            width: 100%;
+            border-radius: 6px;
+            border: none;
+        }
+        button {
+            background: #333;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover { background: #555; }
+        #actionButtons {
+            display: flex;
+            gap: 10px;
+        }
+        #actionButtons button {
+            flex: 1;
+        }
+        #playlist {
+            max-height: 150px;
+            overflow-y: auto;
+            background: #111;
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+        .playlist-item {
+            padding: 8px;
+            background: #222;
+            margin: 5px 0;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .playlist-item.playing { background: #0066cc; }
+        
+        /* Toggle Switch Styling */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 12px 0;
+            padding: 8px;
+            background: rgba(30, 30, 30, 0.7);
+            border-radius: 8px;
+            transition: background 0.3s;
+        }
+
+        .toggle-container:hover {
+            background: rgba(50, 50, 50, 0.9);
+        }
+
+        .toggle-label {
+            color: #ddd;
+            font-size: 0.95em;
+            user-select: none;
+            flex: 1;
+            padding-left: 8px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+
+        /* Hide default checkbox */
+        .toggle-switch input[type="checkbox"] {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        /* Slider background */
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #444;
+            border-radius: 24px;
+            transition: 0.4s;
+        }
+
+        /* Slider handle */
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            border-radius: 50%;
+            transition: 0.4s;
+        }
+
+        /* Checked state */
+        input[type="checkbox"]:checked + .toggle-slider {
+            background: linear-gradient(90deg, #ff3366, #33ff99); /* festive gradient */
+        }
+
+        /* Handle position when checked */
+        input[type="checkbox"]:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+
+        /* Glow when active */
+        input[type="checkbox"]:focus + .toggle-slider,
+        input[type="checkbox"]:hover + .toggle-slider {
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div id="mainContainer">
+        <img id="bgImage" src="" alt="">
+        <canvas id="lightsCanvas"></canvas>
+
+        <div id="controls">
+            <h1>Christmas Lights 🎄✨</h1>
+            <small> Background Image Selection
+            <input type="file" id="imageInput" accept="image/*">
+            <small> Music Selection
+            <input type="file" id="audioInput" accept="audio/*" multiple>
+
+            <select id="lightType">
+            </select>
+
+            <select id="frequency">
+                <option value="bass">Bass (Beat)</option>
+                <option value="mid">Mid (Snare/Vocals)</option>
+                <option value="treble">Treble (Highs)</option>
+                <option value="volume">Overall Volume</option>
+            </select>
+            
+            <div class="toggle-container">
+                <label class="toggle-label">Inverted</label>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="isInverted" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+                <label class="toggle-label">Binary</label>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="isBinary" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+                <label class="toggle-label">Inverted Odds</label>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="isInvertedOdd" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
+            <div id="actionButtons">
+                <button id="clearAll">Clear All Strands</button>
+                <button id="fullscreenBtn">Fullscreen</button>
+            </div>
+
+            <div id="playlist"></div>
+            <audio id="audio" controls></audio>
+            <small>Click two points to add strand • Switch type/freq for new ones</small>
+        </div>
+    </div>
+
+    <script>
+    const canvas = document.getElementById('lightsCanvas');
+    const ctx = canvas.getContext('2d');
+    const bgImage = document.getElementById('bgImage');
+    const imageInput = document.getElementById('imageInput');
+    const audioInput = document.getElementById('audioInput');
+    const audio = document.getElementById('audio');
+    const lightTypeSelect = document.getElementById('lightType');
+    const frequencySelect = document.getElementById('frequency');
+    const clearAllBtn = document.getElementById('clearAll');
+    const fullscreenBtn = document.getElementById('fullscreenBtn');
+    const controls = document.getElementById('controls');
+    const playlistDiv = document.getElementById('playlist');
+    const isInvertedToggle = document.getElementById('isInverted');
+    const isBinaryToggle    = document.getElementById('isBinary');
+    const isInvertedOddToggle = document.getElementById('isInvertedOdd');
+
+    let strands = [];  // Array of multiple strands
+    let activeStrand = null;  // Current strand being drawn (or null if none)
+    
+    let currentType = lightTypeSelect.value;
+    let currentFreq = frequencySelect.value;
+    let clicking = false;
+    let tempStart = null;
+    let playlist = [];
+    let currentSongIndex = 0;
+    let autoHideTimer;
+    let isPlaying = false;
+    let previewStrand = null;  //hold temporary lights for preview
+
+    const LIGHT_SPACING = 20;
+    
+    const LIGHT_TYPES = {
+        multicolor: {
+            name: "Multicolor",
+            colors: ['#ff3333', '#33ff33', '#3333ff', '#ffff33', '#ff8833', '#ff33ff']
+        },
+        warmwhite: {
+            name: "Warm White",
+            colors: ['#ffaa77']
+        },
+        coolwhite: {
+            name: "Cool White",
+            colors: ['#aaddff']
+        },
+        redgreen: {
+            name: "Red and Green",
+            colors: ['#ff3333', '#33ff33']
+        },
+            blue: {
+            name: "Blue",
+            colors: ['#0066ff']
+        },
+        bluewhite: {
+            name: "Blue & White",
+            colors: ['#0066ff', '#ffffff']
+        },
+        iceblue: {
+            name: "Ice Blue",
+            colors: ['#66ccff', '#aaddff']
+        },
+        purple: {
+            name: "Purple",
+            colors: ['#9933ff']
+        },
+        purplewhite: {
+            name: "Purple & White",
+            colors: ['#9933ff', '#ffffff']
+        },
+        rainbow: {
+            name: "Rainbow",
+            colors: ['#ff3333', '#ff8833', '#ffff33', '#33ff33', '#3333ff', '#9933ff']
+        }
+    };
+
+    // Populate light type dropdown dynamically
+    const lightTypeKeys = Object.keys(LIGHT_TYPES);
+
+    // Optional: Sort keys alphabetically for consistent order (recommended)
+    lightTypeKeys.sort();
+
+    lightTypeKeys.forEach(key => {
+        const option = document.createElement('option');
+        option.value = key;
+        option.textContent = LIGHT_TYPES[key].name;
+        lightTypeSelect.appendChild(option);
+    });
+
+    // Fixed Glow Cache — now truly transparent circles
+    const GLOW_LEVELS = 8;
+    const glowCache = {};
+    function createGlow(radius, color) {
+        const offscreen = document.createElement('canvas');
+        offscreen.width = offscreen.height = radius * 2;
+        const gctx = offscreen.getContext('2d');
+
+        const grad = gctx.createRadialGradient(radius, radius, 0, radius, radius, radius);
+        grad.addColorStop(0, color);
+        grad.addColorStop(0.2, color.slice(0,7) + '44');
+        grad.addColorStop(0.3, color.slice(0,7) + '11');
+        grad.addColorStop(1, color.slice(0,7) + '00');
+        gctx.fillStyle = grad;
+        gctx.beginPath();
+        gctx.arc(radius, radius, radius, 0, Math.PI * 2);
+        gctx.fill();
+
+        return offscreen;
+    }
+    function getGlow(color, level) {
+        const key = `${color}-${level}`;
+        if (!glowCache[key]) {
+            const radius = 10 + level * 5;
+            glowCache[key] = createGlow(radius, color);
+        }
+        return glowCache[key];
+    }
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    function resetAutoHide() {
+        clearTimeout(autoHideTimer);
+        controls.classList.remove('hidden');
+        autoHideTimer = setTimeout(() => controls.classList.add('hidden'), 5000);
+    }
+    document.addEventListener('mousemove', resetAutoHide);
+    document.addEventListener('touchstart', resetAutoHide);
+    document.addEventListener('click', resetAutoHide);
+    resetAutoHide();
+
+    fullscreenBtn.addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+        } else {
+            document.exitFullscreen();
+        }
+    });
+
+    imageInput.addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (file) {
+            bgImage.src = URL.createObjectURL(file);
+            strands = [];
+            drawIdle();
+        }
+    });
+
+    audioInput.addEventListener('change', e => {
+        playlist = Array.from(e.target.files);
+        playlistDiv.innerHTML = '';
+        playlist.forEach((file, i) => {
+            const item = document.createElement('div');
+            item.className = 'playlist-item';
+            item.textContent = file.name.slice(0, 35) + (file.name.length > 35 ? '...' : '');
+            item.onclick = () => playSong(i);
+            playlistDiv.appendChild(item);
+        });
+        if (playlist.length) playSong(0);
+    });
+
+    function playSong(index) {
+        currentSongIndex = index;
+        audio.src = URL.createObjectURL(playlist[index]);
+        audio.play();
+        document.querySelectorAll('.playlist-item').forEach((el, i) => el.classList.toggle('playing', i === index));
+    }
+
+    audio.addEventListener('ended', () => {
+        if (currentSongIndex < playlist.length - 1) {
+            playSong(currentSongIndex + 1);
+        } else {
+            playSong(0); //Loop
+        }
+    });
+
+    audio.addEventListener('play', () => { isPlaying = true; if (!audioCtx) initAudio(); draw(); });
+    audio.addEventListener('pause', () => { isPlaying = false; drawIdle(); });
+
+    lightTypeSelect.addEventListener('change', () => currentType = lightTypeSelect.value);
+    frequencySelect.addEventListener('change', () => currentFreq = frequencySelect.value);
+
+    clearAllBtn.addEventListener('click', () => { 
+        strands = []; 
+        activeStrand = null;
+        clicking = false;
+        tempStart = null;
+        previewStrand = null;
+    });
+
+    canvas.addEventListener('click', e => {
+        resetAutoHide();
+        const x = e.clientX;
+        const y = e.clientY;
+
+        if (!clicking) {
+            // Starting a new strand
+            activeStrand = {
+                lights: [{ x, y }],
+                type: lightTypeSelect.value,
+                freq: frequencySelect.value,
+                isInverted:    isInvertedToggle.checked,
+                isBinary:      isBinaryToggle.checked,
+                isInvertedOdd: isInvertedOddToggle.checked
+            };
+            strands.push(activeStrand);
+
+            tempStart = { x, y };
+            clicking = true;
+            previewStrand = [];
+        } else {
+            // Finishing current segment
+            if (previewStrand && previewStrand.length > 0) {
+                // Add all preview lights EXCEPT the first (already added as waypoint)
+                for (let i = 1; i < previewStrand.length; i++) {
+                    activeStrand.lights.push(previewStrand[i]);
+                }
+            }
+
+            // Continue chaining: prepare for next segment from the last point
+            if (activeStrand.lights.length > 0) {
+                const last = activeStrand.lights[activeStrand.lights.length - 1];
+                tempStart = { x: last.x, y: last.y };
+                previewStrand = [];
+                // clicking remains true → continues placement on this strand
+            } else {
+                clicking = false;
+            }
+        }
+    });
+
+    function cancelPlacement() {
+        if (clicking && activeStrand) {
+            // If strand has only the starting point (or very few), remove it completely
+            if (activeStrand.lights.length <= 2) {
+                strands = strands.filter(s => s !== activeStrand);
+            }
+            // Always reset placement state
+            clicking = false;
+            tempStart = null;
+            previewStrand = null;
+            activeStrand = null;
+        }
+    };
+
+    canvas.addEventListener('contextmenu', e => {
+        e.preventDefault(); // Prevent context menu from appearing
+        cancelPlacement()
+    });
+
+    window.addEventListener('keydown', e => {
+        if (e.key === 'Escape' || e.key === 'Esc') {
+            cancelPlacement()
+        }
+    });
+
+    canvas.addEventListener('mousemove', e => {
+        if (!clicking || !tempStart || !activeStrand) {
+            previewStrand = null;
+            return;
+        }
+
+        const x = e.clientX;
+        const y = e.clientY;
+        const dx = x - tempStart.x;
+        const dy = y - tempStart.y;
+        const length = Math.hypot(dx, dy);
+        const numLights = Math.max(3, Math.floor(length / LIGHT_SPACING) + 1);
+
+        previewStrand = [];
+        // Include starting point for visual connection
+        previewStrand.push({ x: tempStart.x, y: tempStart.y });
+
+        for (let i = 1; i < numLights; i++) {
+            const t = i / (numLights - 1);
+            previewStrand.push({
+                x: tempStart.x + t * dx,
+                y: tempStart.y + t * dy
+            });
+        }
+    });
+
+    let audioCtx, analyser, dataArray;
+    function initAudio() {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 512;
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+        const source = audioCtx.createMediaElementSource(audio);
+        source.connect(analyser);
+        analyser.connect(audioCtx.destination);
+    }
+
+    function getFrequencyValue(freqType) {
+        if (!analyser) return 0;
+        analyser.getByteFrequencyData(dataArray);
+        const len = dataArray.length;
+        let sum = 0, count = 0;
+
+        if (freqType === 'bass') {
+            sum = dataArray.slice(0, 15).reduce((a, b) => a + b, 0);
+            count = 15;
+        } else if (freqType === 'mid') {
+            sum = dataArray.slice(15, 80).reduce((a, b) => a + b, 0);
+            count = 65;
+        } else if (freqType === 'treble') {
+            sum = dataArray.slice(80).reduce((a, b) => a + b, 0);
+            count = len - 80;
+        } else { // volume
+            sum = dataArray.reduce((a, b) => a + b, 0);
+            count = len;
+        }
+
+        return (sum / count) / 255;
+    }
+
+    function getLightColor(type, index) {
+            const typeConfig = LIGHT_TYPES[type];
+            if (!typeConfig) return '#ffffff'; // fallback
+
+            const colors = typeConfig.colors;
+
+            // Single-color types (like warmwhite, coolwhite)
+            if (colors.length === 1) {
+                return colors[0];
+            }
+
+            // Alternating (redgreen) or cycling (multicolor)
+            return colors[index % colors.length];
+        }
+
+    function drawIdle() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        strands.forEach(strand => {
+            strand.lights.forEach((light, i) => {
+                const color = getLightColor(strand.type, i);
+                ctx.fillStyle = color;
+                ctx.globalAlpha = 0.8;
+                ctx.beginPath();
+                ctx.arc(light.x, light.y, 2, 0, Math.PI*2);
+                ctx.fill();
+            });
+        });
+
+        //draw preview if we're actively placing a strand
+        drawPreview();
+        requestAnimationFrame(drawIdle);
+    }
+
+    function drawPreview() {
+        if (clicking && previewStrand && previewStrand.length > 0) {
+            previewStrand.forEach((light, i) => {
+                const color = getLightColor(currentType, i);
+                
+                // Semi-transparent bulbs for preview
+                ctx.globalAlpha = 0.5;
+                ctx.fillStyle = color;
+                ctx.beginPath();
+                ctx.arc(light.x, light.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Optional: faint connecting line
+                if (i > 0) {
+                    ctx.globalAlpha = 0.3;
+                    ctx.strokeStyle = color;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(previewStrand[i-1].x, previewStrand[i-1].y);
+                    ctx.lineTo(light.x, light.y);
+                    ctx.stroke();
+                }
+            });
+        ctx.globalAlpha = 1.0;  // Always reset
+        }
+    }
+
+    function getModifiedIntensity(strand, lightIndex, baseIntensity) {
+        let intensity = baseIntensity;
+
+        // Binary mode: lights are either fully on or fully off
+        if (strand.isBinary) {
+            intensity = intensity > 0.4 ? 1 : 0; // threshold to avoid faint lights
+        }
+
+        // Invert
+        if (strand.isInverted) {
+                intensity = 1 - intensity; // invert: high → low, low → high
+        }
+
+        // Invert only odd-indexed lights
+        if (strand.isInvertedOdd) {
+            if (lightIndex % 2 === 1) {
+               intensity = 1 - intensity;
+            }
+        }
+
+    return intensity;
+}
+
+    function draw() {
+        if (!isPlaying) return;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.globalCompositeOperation = 'lighter';
+
+        strands.forEach(strand => {
+            const baseIntensity = getFrequencyValue(strand.freq);
+
+            strand.lights.forEach((light, i) => {
+                const color = getLightColor(strand.type, i);
+                const intensity = getModifiedIntensity(strand, i, baseIntensity);
+                const level = Math.floor(intensity * GLOW_LEVELS);
+                const glowCanvas = getGlow(color, level);
+                ctx.drawImage(glowCanvas, light.x - glowCanvas.width/2, light.y - glowCanvas.height/2);
+
+                // Bright core
+                ctx.fillStyle = color;
+                ctx.globalAlpha = 0.4 + intensity * 0.6;
+                ctx.beginPath();
+                ctx.arc(light.x, light.y, 1 + intensity, 0, Math.PI*2);
+                ctx.fill();
+            });
+        });
+
+        //draw preview if we're actively placing a strand
+        drawPreview();
+
+        ctx.globalCompositeOperation = 'source-over';
+        requestAnimationFrame(draw);
+    }
+
+    drawIdle();
+</script>
+</body>
+</html>
