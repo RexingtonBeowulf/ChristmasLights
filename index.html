@@ -1,664 +1,248 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Christmas Lights Music Visualizer 🎄✨</title>
-    <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            background: #000;
-            font-family: Arial, sans-serif;
-            color: white;
-            overflow: hidden;
-        }
-        #mainContainer {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-        }
-        #bgImage {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            object-fit: contain;
-            opacity: 0.85;
-            z-index: 1;
-        }
-        canvas {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 2;
-            cursor: crosshair;
-        }
-        #controls {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: rgba(0,0,0,0.7);
-            padding: 15px;
-            border-radius: 10px;
-            max-width: 320px;
-            z-index: 3;
-            transition: opacity 0.5s;
-            pointer-events: auto;
-        }
-        #controls.hidden { opacity: 0; pointer-events: none; }
-        h1 {
-            margin: 0 0 15px 0;
-            text-align: center;
-            text-shadow: 0 0 10px #ff0000;
-            font-size: 1.5em;
-        }
-        select, button, input {
-            display: block;
-            margin: 10px 0;
-            padding: 8px;
-            width: 100%;
-            border-radius: 6px;
-            border: none;
-        }
-        button {
-            background: #333;
-            color: white;
-            cursor: pointer;
-        }
-        button:hover { background: #555; }
-        #actionButtons {
-            display: flex;
-            gap: 10px;
-        }
-        #actionButtons button {
-            flex: 1;
-        }
-        #playlist {
-            max-height: 150px;
-            overflow-y: auto;
-            background: #111;
-            padding: 10px;
-            border-radius: 6px;
-            margin: 10px 0;
-        }
-        .playlist-item {
-            padding: 8px;
-            background: #222;
-            margin: 5px 0;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        .playlist-item.playing { background: #0066cc; }
-        
-        /* Toggle Switch Styling */
-        .toggle-container {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin: 12px 0;
-            padding: 8px;
-            background: rgba(30, 30, 30, 0.7);
-            border-radius: 8px;
-            transition: background 0.3s;
-        }
-
-        .toggle-container:hover {
-            background: rgba(50, 50, 50, 0.9);
-        }
-
-        .toggle-label {
-            color: #ddd;
-            font-size: 0.95em;
-            user-select: none;
-            flex: 1;
-            padding-left: 8px;
-        }
-
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 48px;
-            height: 24px;
-        }
-
-        /* Hide default checkbox */
-        .toggle-switch input[type="checkbox"] {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        /* Slider background */
-        .toggle-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: #444;
-            border-radius: 24px;
-            transition: 0.4s;
-        }
-
-        /* Slider handle */
-        .toggle-slider:before {
-            position: absolute;
-            content: "";
-            height: 20px;
-            width: 20px;
-            left: 2px;
-            bottom: 2px;
-            background-color: white;
-            border-radius: 50%;
-            transition: 0.4s;
-        }
-
-        /* Checked state */
-        input[type="checkbox"]:checked + .toggle-slider {
-            background: linear-gradient(90deg, #ff3366, #33ff99); /* festive gradient */
-        }
-
-        /* Handle position when checked */
-        input[type="checkbox"]:checked + .toggle-slider:before {
-            transform: translateX(24px);
-        }
-
-        /* Glow when active */
-        input[type="checkbox"]:focus + .toggle-slider,
-        input[type="checkbox"]:hover + .toggle-slider {
-            box-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Christmas Lights MIDI Visualizer 🎄✨</title>
+<!-- GPL-3.0 (see LICENSE). Built-in songs are public-domain carols, arranged and released CC0.
+     Built-in scenes are drawn by this page's code, CC0. -->
+<style>
+:root{--bg:#050807;--panel:rgba(12,18,15,.82);--red:#e0443a;--green:#3fd28a;--ink:#f1ece0;--mute:#9db0a5}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px system-ui,sans-serif;overflow:hidden}
+#bg{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1}
+canvas{position:absolute;inset:0;width:100%;height:100%;z-index:2;cursor:crosshair;touch-action:none}
+#panel{position:absolute;top:10px;left:10px;bottom:10px;width:310px;max-width:calc(100vw - 20px);overflow-y:auto;background:var(--panel);backdrop-filter:blur(8px);border:1px solid #ffffff1c;border-radius:12px;padding:14px;z-index:3;transition:opacity .5s}
+#panel.hide{opacity:0;pointer-events:none}
+h1{font:italic 700 22px Georgia,serif;margin:0 0 10px;color:#ffd9a0;text-shadow:0 0 12px var(--red)}
+h2{font:600 13px system-ui;margin:14px 0 6px;color:var(--green)}
+select,button,input[type=file]{width:100%;margin:3px 0;padding:7px;border-radius:6px;border:1px solid #ffffff22;background:#1b2622;color:var(--ink);font:inherit}
+button{cursor:pointer}button:hover{background:#2a3a33}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--green);outline-offset:1px}
+.row{display:flex;gap:6px}.row>*{flex:1}
+label.r{display:flex;align-items:center;gap:8px;margin:5px 0;color:var(--mute)}
+label.r input[type=range]{flex:1}
+label.r span{width:70px}
+.tg{display:flex;gap:12px;flex-wrap:wrap;margin:6px 0}.tg label{display:flex;gap:5px;align-items:center}
+#list{max-height:130px;overflow-y:auto;background:#0a0f0d;border-radius:6px;padding:4px}
+#list div{padding:6px 8px;border-radius:4px;cursor:pointer}
+#list div.on{background:#1d5b43}
+#list small{display:block;color:var(--mute)}
+#done{position:absolute;right:14px;bottom:14px;z-index:4;width:auto;padding:10px 18px;background:var(--red);display:none}
+small.h{color:var(--mute);display:block;margin-top:8px;line-height:1.4}
+a{color:#ffd9a0}
+#bar{width:100%}
+</style>
 </head>
 <body>
-    <div id="mainContainer">
-        <img id="bgImage" src="" alt="">
-        <canvas id="lightsCanvas"></canvas>
+<img id="bg" alt="">
+<canvas id="cv"></canvas>
+<button id="done">Finish strand</button>
+<div id="panel">
+  <h1>Christmas Lights</h1>
 
-        <div id="controls">
-            <h1>Christmas Lights 🎄✨</h1>
-            <small> Background Image Selection
-            <input type="file" id="imageInput" accept="image/*">
-            <small> Music Selection
-            <input type="file" id="audioInput" accept="audio/*" multiple>
+  <h2>Scene</h2>
+  <div class="row"><button data-s="0">Cabin</button><button data-s="1">Tree</button></div>
+  <div class="row"><button data-s="2">Village</button><button data-s="3">Aurora</button></div>
+  <input type="file" id="imgIn" accept="image/*" aria-label="Your own background image">
 
-            <select id="lightType">
-            </select>
+  <h2>Music (MIDI)</h2>
+  <div id="list"></div>
+  <input type="file" id="midIn" accept=".mid,.midi,audio/midi" multiple aria-label="Add MIDI files">
+  <div class="row"><button id="prev" aria-label="Previous">⏮</button><button id="pp">▶ Play</button><button id="next" aria-label="Next">⏭</button></div>
+  <input type="range" id="bar" min="0" max="1" step="0.01" value="0" aria-label="Song position">
+  <label class="r"><span>Tempo</span><input type="range" id="tempo" min=".5" max="1.6" step=".05" value="1"></label>
+  <label class="r"><span>Volume</span><input type="range" id="vol" min="0" max="1" step=".05" value=".7"></label>
 
-            <select id="frequency">
-                <option value="bass">Bass (Beat)</option>
-                <option value="mid">Mid (Snare/Vocals)</option>
-                <option value="treble">Treble (Highs)</option>
-                <option value="volume">Overall Volume</option>
-            </select>
-            
-            <div class="toggle-container">
-                <label class="toggle-label">Inverted</label>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="isInverted" checked>
-                    <span class="toggle-slider"></span>
-                </label>
-                <label class="toggle-label">Binary</label>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="isBinary" checked>
-                    <span class="toggle-slider"></span>
-                </label>
-                <label class="toggle-label">Inverted Odds</label>
-                <label class="toggle-switch">
-                    <input type="checkbox" id="isInvertedOdd" checked>
-                    <span class="toggle-slider"></span>
-                </label>
-            </div>
+  <h2>New strand</h2>
+  <select id="ltype" aria-label="Light type"></select>
+  <select id="mode" aria-label="What triggers the lights">
+    <option value="any">Every note</option>
+    <option value="low">Low notes</option>
+    <option value="mid">Middle notes</option>
+    <option value="high">High notes</option>
+    <option value="pitch">Pitch map (each bulb = a pitch)</option>
+    <option value="chase">Chase (each note = next bulb)</option>
+    <option value="drums">Percussion / bells</option>
+    <optgroup id="trk" label="Follow one track"></optgroup>
+  </select>
+  <div class="tg">
+    <label><input type="checkbox" id="inv">Invert</label>
+    <label><input type="checkbox" id="bin">Binary</label>
+    <label><input type="checkbox" id="alt">Alternate</label>
+  </div>
+  <label class="r"><span>Spacing</span><input type="range" id="sp" min="12" max="44" value="22"></label>
+  <h2>All strands</h2>
+  <label class="r"><span>Fade</span><input type="range" id="fade" min=".08" max="1.2" step=".02" value=".35"></label>
+  <label class="r"><span>Wave</span><input type="range" id="wave" min="0" max="60" value="0"></label>
+  <div class="row"><button id="undo">Undo</button><button id="clear">Clear</button><button id="fs">Fullscreen</button></div>
+  <small class="h">Click to start a strand, click again to bend it. Double-click, Enter or right-click finishes; Esc cancels. Drop .mid or image files anywhere. Type, trigger and toggles apply to new strands. H hides this panel.</small>
+  <small class="h">Free images: <a href="https://commons.wikimedia.org/wiki/Category:Christmas_lights" target="_blank" rel="noopener">Wikimedia Commons</a>, <a href="https://openverse.org" target="_blank" rel="noopener">Openverse</a>. Free MIDI: <a href="https://www.mutopiaproject.org" target="_blank" rel="noopener">Mutopia</a>. Check each licence.</small>
+</div>
 
-            <div id="actionButtons">
-                <button id="clearAll">Clear All Strands</button>
-                <button id="fullscreenBtn">Fullscreen</button>
-            </div>
+<script>
+const $=id=>document.getElementById(id),cv=$('cv'),x=cv.getContext('2d');
+const LT={multicolor:['Multicolor',['#ff3333','#33ff33','#3333ff','#ffff33','#ff8833','#ff33ff']],warmwhite:['Warm White',['#ffaa77']],coolwhite:['Cool White',['#aaddff']],redgreen:['Red and Green',['#ff3333','#33ff33']],blue:['Blue',['#0066ff']],bluewhite:['Blue & White',['#0066ff','#ffffff']],iceblue:['Ice Blue',['#66ccff','#aaddff']],purple:['Purple',['#9933ff']],purplewhite:['Purple & White',['#9933ff','#ffffff']],rainbow:['Rainbow',['#ff3333','#ff8833','#ffff33','#33ff33','#3333ff','#9933ff']]};
+Object.keys(LT).sort().forEach(k=>$('ltype').add(new Option(LT[k][0],k)));
 
-            <div id="playlist"></div>
-            <audio id="audio" controls></audio>
-            <small>Click two points to add strand • Switch type/freq for new ones</small>
-        </div>
-    </div>
+/* ---------- Scenes (original CC0 artwork, generated) ---------- */
+const SCENES=['Cabin','Tree','Village','Aurora'];
+function rng(s){return()=>(s=s*16807%2147483647)/2147483647}
+function fir(px,py,h,c='#0a2a22'){let p='';for(let i=0;i<3;i++){const t=py-h+i*h*.28,w=h*(.2+i*.1),b=t+h*.42;p+=`<path d="M${px} ${t}L${px+w} ${b}L${px-w} ${b}Z"/>`}return`<g fill="${c}">${p}<rect x="${px-4}" y="${py-2}" width="8" height="14" fill="#2a1a10"/></g>`}
+function scene(k){
+  const r=rng(k*97+13),sky=[['#0b1d3a','#3b3a73'],['#0d0d2b','#2a1f4f'],['#10253f','#7a5580'],['#02121f','#0f4c4a']][k];
+  let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${sky[0]}"/><stop offset="1" stop-color="${sky[1]}"/></linearGradient><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5dffb0" stop-opacity="0"/><stop offset=".5" stop-color="#5dffb0" stop-opacity=".45"/><stop offset="1" stop-color="#5d8bff" stop-opacity="0"/></linearGradient></defs><rect width="1600" height="900" fill="url(#g)"/>`;
+  for(let i=0;i<90;i++)s+=`<circle cx="${r()*1600|0}" cy="${r()*520|0}" r="${.5+r()*1.6}" fill="#fff" opacity="${.3+r()*.7}"/>`;
+  if(k<3)s+=`<circle cx="${k==1?260:1250}" cy="150" r="58" fill="#fdf3c8"/>`;
+  if(k==3){for(let i=0;i<4;i++)s+=`<ellipse cx="${300+i*330}" cy="${230+r()*60}" rx="260" ry="${90+r()*70}" fill="url(#a)" transform="rotate(${-12+i*8} ${300+i*330} 250)"/>`;
+    s+=`<path d="M0 640L260 430L430 560L700 330L980 580L1220 410L1600 620V900H0Z" fill="#0b2a38"/><path d="M700 330L640 400L700 380L760 410ZM260 430L215 480L260 465L300 490ZM1220 410L1170 470L1220 450L1270 480Z" fill="#e8f4ff"/>`}
+  else s+=`<path d="M0 640Q300 560 620 620T1240 600T1600 640V900H0Z" fill="#14264a"/>`;
+  s+=`<rect y="720" width="1600" height="180" fill="#e9f1f7"/><path d="M0 720Q400 690 800 722T1600 715V740H0Z" fill="#fff"/>`;
+  if(k==0){s+=`<rect x="580" y="500" width="440" height="230" fill="#4a2c1a"/><rect x="900" y="400" width="50" height="100" fill="#3a2214"/><path d="M540 510L800 360L1060 510Z" fill="#f4f8fb"/><rect x="620" y="560" width="110" height="90" fill="#ffcf70"/><rect x="870" y="560" width="110" height="90" fill="#ffcf70"/><rect x="760" y="580" width="80" height="150" fill="#2b1810"/>`;
+    [120,260,400,1180,1330,1480].forEach((q,i)=>s+=fir(q,740,200+i%3*60))}
+  if(k==1){s+=fir(260,740,250)+fir(1340,740,280)+`<g fill="#0c3a2c">`;for(let i=0;i<5;i++){const t=170+i*105,w=110+i*55;s+=`<path d="M800 ${t}L${800+w} ${t+190}L${800-w} ${t+190}Z"/>`}
+    s+=`</g><path d="M800 110l14 38 40 2-32 25 11 39-33-23-33 23 11-39-32-25 40-2z" fill="#ffd34d"/>`;
+    ['#e0443a','#3fd28a','#ffd34d','#6aa8ff'].forEach((c,i)=>s+=`<rect x="${610+i*95}" y="${770+(i%2)*10}" width="80" height="${60-(i%2)*10}" fill="${c}"/><rect x="${645+i*95}" y="${770+(i%2)*10}" width="10" height="${60-(i%2)*10}" fill="#fff8"/>`)}
+  if(k==2){for(let i=0;i<6;i++){const hx=40+i*260,hh=180+r()*120,w=210;s+=`<rect x="${hx}" y="${730-hh}" width="${w}" height="${hh}" fill="${['#5a3a52','#3d4f6b','#6b4a3a','#4a5f4f'][i%4]}"/><path d="M${hx-14} ${730-hh}L${hx+w/2} ${730-hh-110}L${hx+w+14} ${730-hh}Z" fill="#f4f8fb"/>`;
+      for(let j=0;j<2;j++)s+=`<rect x="${hx+30+j*100}" y="${730-hh+30}" width="50" height="60" fill="#ffcf70"/>`;s+=`<rect x="${hx+w/2-22}" y="${690}" width="44" height="60" fill="#2b1810"/>`}}
+  if(k==3)[100,240,1360,1500,700,900].forEach((q,i)=>s+=fir(q,760,170+i%3*50,'#06241e'));
+  for(let i=0;i<110;i++)s+=`<circle cx="${r()*1600|0}" cy="${r()*900|0}" r="${1+r()*2.2}" fill="#fff" opacity=".7"/>`;
+  return'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s+'</svg>')}
+function setBg(src,keep){$('bg').src=src;if(!keep)strands=[]}
+document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>setBg(scene(+b.dataset.s)));
+$('imgIn').onchange=e=>e.target.files[0]&&setBg(URL.createObjectURL(e.target.files[0]));
 
-    <script>
-    const canvas = document.getElementById('lightsCanvas');
-    const ctx = canvas.getContext('2d');
-    const bgImage = document.getElementById('bgImage');
-    const imageInput = document.getElementById('imageInput');
-    const audioInput = document.getElementById('audioInput');
-    const audio = document.getElementById('audio');
-    const lightTypeSelect = document.getElementById('lightType');
-    const frequencySelect = document.getElementById('frequency');
-    const clearAllBtn = document.getElementById('clearAll');
-    const fullscreenBtn = document.getElementById('fullscreenBtn');
-    const controls = document.getElementById('controls');
-    const playlistDiv = document.getElementById('playlist');
-    const isInvertedToggle = document.getElementById('isInverted');
-    const isBinaryToggle    = document.getElementById('isBinary');
-    const isInvertedOddToggle = document.getElementById('isInvertedOdd');
+/* ---------- Songs: public-domain carols, own arrangements (CC0) ---------- */
+const nm=n=>{let i=1,a=0;if(n[i]=='#'){a=1;i++}else if(n[i]=='b'){a=-1;i++}return 12*(+n.slice(i)+1)+{C:0,D:2,E:4,F:5,G:7,A:9,B:11}[n[0]]+a};
+function build(d){
+  const ev=[],bpb=d.bpb,s=d.pick||0;let t=0;
+  for(const tk of d.mel.split(/\s+/)){const[n,l]=tk.split('/');if(n!='r')ev.push({b:t,d:+l,m:nm(n),v:.85,tr:0,k:'bell'});t+=+l}
+  d.ch.split(' ').forEach((c,i)=>{const o=s+i*bpb,q=c.slice(1),iv=q=='m'?[0,3,7]:q=='7'?[0,4,7,10]:[0,4,7],ro=nm(c[0]+'3');
+    ev.push({b:o,d:1.5,m:ro-12,v:.8,tr:2,k:'bass'});if(bpb==4)ev.push({b:o+2,d:1.5,m:ro-5,v:.6,tr:2,k:'bass'});
+    (bpb==4?[1,3]:[1,2]).forEach(p=>iv.forEach(j=>ev.push({b:o+p,d:.9,m:ro+j+12,v:.35,tr:1,k:'soft'})))});
+  const len=Math.max(...ev.map(e=>e.b+e.d))+1.5;
+  if(d.jg)for(let q=0;q<len;q+=.5)ev.push({b:q,d:.1,m:83,dr:1,v:q%1?.3:.55,tr:3});
+  ev.sort((a,b)=>a.b-b.b);return fin({title:d.t,by:d.by,bpm:d.bpm,ev,len,trk:['Melody','Chords','Bass','Sleigh bells']})}
+function fin(s){const p=s.ev.filter(e=>!e.dr).map(e=>e.m);s.lo=Math.min(...p);s.hi=Math.max(...p);return s}
+const sw=[];for(let k=0;k<64;k++){let j=k%20;if(j>10)j=20-j;sw.push(['C4','D4','E4','G4','A4','C5','D5','E5','G5','A5','C6'][j]+'/.5')}
+const songs=[
+build({t:'Jingle Bells',by:'J. Pierpont, 1857 · public domain',bpm:150,bpb:4,jg:1,
+ mel:'E4/1 E4/1 E4/2 E4/1 E4/1 E4/2 E4/1 G4/1 C4/1.5 D4/.5 E4/4 F4/1 F4/1 F4/1.5 F4/.5 F4/1 E4/1 E4/1 E4/.5 E4/.5 E4/1 D4/1 D4/1 E4/1 D4/2 G4/2 E4/1 E4/1 E4/2 E4/1 E4/1 E4/2 E4/1 G4/1 C4/1.5 D4/.5 E4/4 F4/1 F4/1 F4/1 F4/1 F4/1 E4/1 E4/1 E4/.5 E4/.5 G4/1 G4/1 F4/1 D4/1 C4/4',
+ ch:'C C C C F C G7 G7 C C C C F C G7 C'}),
+build({t:'We Wish You a Merry Christmas',by:'Traditional English · public domain',bpm:128,bpb:3,pick:1,
+ mel:'G4/1 C5/1 C5/.5 D5/.5 C5/.5 B4/.5 A4/1 A4/1 A4/1 D5/1 D5/.5 E5/.5 D5/.5 C5/.5 B4/1 G4/1 G4/1 E5/1 E5/.5 F5/.5 E5/.5 D5/.5 C5/1 A4/1 G4/.5 G4/.5 A4/1 D5/1 B4/1 C5/3',
+ ch:'C F G G C F G C'}),
+build({t:'Silent Night',by:'F. Gruber, 1818 · public domain',bpm:76,bpb:3,
+ mel:'G4/1.5 A4/.5 G4/1 E4/3 G4/1.5 A4/.5 G4/1 E4/3 D5/2 D5/1 B4/3 C5/2 C5/1 G4/3 A4/2 A4/1 C5/1.5 B4/.5 A4/1 G4/1.5 A4/.5 G4/1 E4/3 A4/2 A4/1 C5/1.5 B4/.5 A4/1 G4/1.5 A4/.5 G4/1 E4/3 D5/2 D5/1 F5/1.5 D5/.5 B4/1 C5/3 E5/3 C5/1 G4/1 E4/1 G4/1.5 F4/.5 D4/1 C4/3',
+ ch:'C C C C G G C C F F C C F F C C G G C C C G C'}),
+build({t:'Twinkle Sweep (original demo)',by:'Written for this page · CC0',bpm:132,bpb:4,jg:1,mel:sw.join(' '),ch:'C Am F G C Am F G'})
+];
 
-    let strands = [];  // Array of multiple strands
-    let activeStrand = null;  // Current strand being drawn (or null if none)
-    
-    let currentType = lightTypeSelect.value;
-    let currentFreq = frequencySelect.value;
-    let clicking = false;
-    let tempStart = null;
-    let playlist = [];
-    let currentSongIndex = 0;
-    let autoHideTimer;
-    let isPlaying = false;
-    let previewStrand = null;  //hold temporary lights for preview
+/* ---------- MIDI file parser ---------- */
+const kindOf=p=>p<8?'soft':p<16?'bell':p<24?'organ':p<32?'soft':p<40?'bass':p<56?'pad':p<80?'organ':p<96?'pad':'bell';
+function parseMidi(buf,name){
+  const d=new DataView(buf),u=new Uint8Array(buf);let p=0;const s4=()=>String.fromCharCode(u[p++],u[p++],u[p++],u[p++]);
+  if(s4()!='MThd')throw new Error('Not a MIDI file');const nt=d.getUint16(10),dv=d.getUint16(12);p=14;
+  let bpm=120,gotT=0;const ev=[],trk=[],tmap={};
+  for(let t=0;t<nt;t++){if(s4()!='MTrk')break;const len=d.getUint32(p);p+=4;const end=p+len;let tick=0,rs=0,tn='',prog={},open={};
+    const vl=()=>{let v=0,c;do{c=u[p++];v=v*128+(c&127)}while(c&128);return v};
+    while(p<end){tick+=vl();let st=u[p];if(st<128)st=rs;else{p++;if(st<240)rs=st}
+      if(st==255){const ty=u[p++],l=vl();if(ty==3)tn=String.fromCharCode(...u.slice(p,p+l));if(ty==0x51&&!gotT){bpm=6e7/((u[p]<<16)|(u[p+1]<<8)|u[p+2]);gotT=1}p+=l}
+      else if(st==240||st==247)p+=vl();
+      else{const c=st&15,ty=st>>4,a=u[p++],b=(ty==12||ty==13)?0:u[p++];
+        if(ty==12)prog[c]=a;
+        else if(ty==9&&b>0)open[c*128+a]=[tick,b,prog[c]||0];
+        else if(ty==8||ty==9){const o=open[c*128+a];if(o){delete open[c*128+a];const id=t+':'+c;
+          if(tmap[id]==null){tmap[id]=trk.length;trk.push((tn||'Track '+(t+1))+(c==9?' (drums)':''))}
+          if(ev.length<30000)ev.push({b:o[0]/dv,d:Math.max(.06,(tick-o[0])/dv),m:a,v:o[1]/127,tr:tmap[id],dr:c==9?1:0,k:kindOf(o[2])})}}}}
+    p=end}
+  if(!ev.length)throw new Error('No notes found');
+  ev.sort((a,b)=>a.b-b.b);return fin({title:name.replace(/\.midi?$/i,''),by:'Your MIDI file',bpm:Math.min(240,Math.max(30,bpm)),ev,len:Math.max(...ev.map(e=>e.b+e.d))+1,trk})}
+async function addMidi(f){try{songs.push(parseMidi(await f.arrayBuffer(),f.name));renderList();if(!playing&&songs.length)load(songs.length-1,true)}catch(e){alert(f.name+': '+e.message)}}
+$('midIn').onchange=e=>[...e.target.files].forEach(addMidi);
+addEventListener('dragover',e=>e.preventDefault());
+addEventListener('drop',e=>{e.preventDefault();[...e.dataTransfer.files].forEach(f=>/\.midi?$/i.test(f.name)?addMidi(f):/^image\//.test(f.type)&&setBg(URL.createObjectURL(f)))});
 
-    const LIGHT_SPACING = 20;
-    
-    const LIGHT_TYPES = {
-        multicolor: {
-            name: "Multicolor",
-            colors: ['#ff3333', '#33ff33', '#3333ff', '#ffff33', '#ff8833', '#ff33ff']
-        },
-        warmwhite: {
-            name: "Warm White",
-            colors: ['#ffaa77']
-        },
-        coolwhite: {
-            name: "Cool White",
-            colors: ['#aaddff']
-        },
-        redgreen: {
-            name: "Red and Green",
-            colors: ['#ff3333', '#33ff33']
-        },
-            blue: {
-            name: "Blue",
-            colors: ['#0066ff']
-        },
-        bluewhite: {
-            name: "Blue & White",
-            colors: ['#0066ff', '#ffffff']
-        },
-        iceblue: {
-            name: "Ice Blue",
-            colors: ['#66ccff', '#aaddff']
-        },
-        purple: {
-            name: "Purple",
-            colors: ['#9933ff']
-        },
-        purplewhite: {
-            name: "Purple & White",
-            colors: ['#9933ff', '#ffffff']
-        },
-        rainbow: {
-            name: "Rainbow",
-            colors: ['#ff3333', '#ff8833', '#ffff33', '#33ff33', '#3333ff', '#9933ff']
-        }
-    };
+/* ---------- Synth ---------- */
+const K={bell:{p:[[1,1],[2.76,.3],[5.4,.1]],a:.003,dec:1.8},soft:{p:[[1,1,'triangle'],[2,.2]],a:.004,dec:.9},bass:{p:[[1,1,'triangle'],[.5,.5]],a:.01,dec:.8,lp:700},
+ organ:{p:[[1,.6],[2,.3],[3,.15]],a:.02,sus:1,r:.12},pad:{p:[[1,.5,'sawtooth',-8],[1,.5,'sawtooth',8]],a:.12,sus:1,r:.4,lp:1400}};
+let A,bus,master,NB;
+function audio(){if(A)return;A=new AudioContext();master=A.createGain();master.gain.value=+$('vol').value;bus=A.createGain();
+  const cp=A.createDynamicsCompressor(),rv=A.createConvolver(),w=A.createGain(),n=A.sampleRate*2.2|0,ib=A.createBuffer(2,n,A.sampleRate);
+  for(let c=0;c<2;c++){const a=ib.getChannelData(c);for(let i=0;i<n;i++)a[i]=(Math.random()*2-1)*(1-i/n)**3}
+  rv.buffer=ib;w.gain.value=.3;bus.connect(master);bus.connect(w);w.connect(rv);rv.connect(master);master.connect(cp);cp.connect(A.destination);
+  NB=A.createBuffer(1,A.sampleRate,A.sampleRate);const d=NB.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}
+function voice(k,m,t,d,v){const P=K[k]||K.soft,f=440*2**((m-69)/12),g=A.createGain(),pk=v*.22;let o=g;
+  if(P.lp){const F=A.createBiquadFilter();F.frequency.value=P.lp;g.connect(F);o=F}o.connect(bus);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(pk,t+P.a);let e;
+  if(P.sus){const h=t+Math.max(d,P.a);g.gain.setValueAtTime(pk,h);e=h+P.r;g.gain.linearRampToValueAtTime(0,e)}else{e=t+P.a+P.dec;g.gain.exponentialRampToValueAtTime(.0001,e)}
+  P.p.forEach(([mu,gn,ty,dt])=>{const s=A.createOscillator(),h=A.createGain();s.type=ty||'sine';s.frequency.value=f*mu;if(dt)s.detune.value=dt;h.gain.value=gn;s.connect(h).connect(g);s.start(t);s.stop(e+.05)})}
+function drum(n,t,v){
+  if(n==35||n==36){const o=A.createOscillator(),g=A.createGain();o.frequency.setValueAtTime(140,t);o.frequency.exponentialRampToValueAtTime(45,t+.15);g.gain.setValueAtTime(v*.9,t);g.gain.exponentialRampToValueAtTime(.001,t+.25);o.connect(g).connect(bus);o.start(t);o.stop(t+.3);return}
+  const sn=n==38||n==40,jb=n==83||n==70||n==69||n==54,s=A.createBufferSource(),F=A.createBiquadFilter(),g=A.createGain(),L=sn?.18:jb?.16:.05;
+  s.buffer=NB;F.type=jb?'bandpass':'highpass';F.frequency.value=sn?1500:jb?5500:8000;if(jb)F.Q.value=2.5;
+  g.gain.setValueAtTime(v*(jb?.7:.5),t);g.gain.exponentialRampToValueAtTime(.001,t+L);s.connect(F).connect(g).connect(bus);s.start(t,Math.random()*.5);s.stop(t+L+.02)}
 
-    // Populate light type dropdown dynamically
-    const lightTypeKeys = Object.keys(LIGHT_TYPES);
+/* ---------- Transport ---------- */
+let song,si=0,evI=0,base={b:0,t:0},tempo=1,playing=false,timer,q=[],pausedB=0,seeking=false;
+const spb=()=>60/(song.bpm*tempo),curB=()=>playing?base.b+(A.currentTime-base.t)/spb():pausedB;
+function load(i,keepPaused){si=i;song=songs[i];evI=0;q=[];pausedB=0;buildTracks();renderList();$('bar').max=song.len;$('bar').value=0;
+  if(!keepPaused)start(0)}
+function start(b){audio();A.resume();base={b,t:A.currentTime+.08};evI=song.ev.findIndex(e=>e.b>=b-.001);if(evI<0)evI=song.ev.length;playing=true;clearInterval(timer);timer=setInterval(sched,25);$('pp').textContent='⏸ Pause'}
+function pause(){if(!playing)return;pausedB=curB();playing=false;clearInterval(timer);$('pp').textContent='▶ Play'}
+function sched(){const now=A.currentTime,hor=now+.2;
+  while(evI<song.ev.length){const e=song.ev[evI],t=base.t+(e.b-base.b)*spb();if(t>hor)break;
+    if(t>=now-.05){const tt=Math.max(t,now);e.dr?drum(e.m,tt,e.v):voice(e.k,e.m,tt,e.d*spb(),e.v);q.push({t:tt,e})}evI++}
+  if(evI>=song.ev.length&&curB()>song.len)load((si+1)%songs.length)}
+$('pp').onclick=()=>{if(playing)pause();else{if(!song)load(0);else start(pausedB)}};
+$('next').onclick=()=>load((si+1)%songs.length);$('prev').onclick=()=>load((si+songs.length-1)%songs.length);
+$('tempo').oninput=e=>{if(playing){base={b:curB(),t:A.currentTime}}tempo=+e.target.value};
+$('vol').oninput=e=>{if(master)master.gain.value=+e.target.value};
+$('bar').onpointerdown=()=>seeking=true;
+$('bar').onchange=e=>{seeking=false;const b=+e.target.value;q=[];if(playing)start(b);else pausedB=b};
+function renderList(){const L=$('list');L.innerHTML='';songs.forEach((s,i)=>{const d=document.createElement('div');d.className=i==si&&song?'on':'';d.innerHTML=`${s.title.replace(/</g,'&lt;')}<small>${s.by.replace(/</g,'&lt;')}</small>`;d.onclick=()=>load(i);L.appendChild(d)})}
+function buildTracks(){const g=$('trk');g.innerHTML='';song.trk.forEach((n,i)=>g.appendChild(new Option(n,'t'+i)))}
 
-    // Optional: Sort keys alphabetically for consistent order (recommended)
-    lightTypeKeys.sort();
+/* ---------- Lights ---------- */
+let strands=[],cur=null,mouse=null,W,H,DPR,mx=0;
+function size(){DPR=devicePixelRatio||1;W=innerWidth;H=innerHeight;cv.width=W*DPR;cv.height=H*DPR}addEventListener('resize',size);size();
+const GC={};function glow(c,l){const k=c+l;if(!GC[k]){const r=10+l*5,o=document.createElement('canvas');o.width=o.height=r*2;const g=o.getContext('2d'),gr=g.createRadialGradient(r,r,0,r,r,r);
+  gr.addColorStop(0,c);gr.addColorStop(.2,c+'44');gr.addColorStop(.3,c+'11');gr.addColorStop(1,c+'00');g.fillStyle=gr;g.fillRect(0,0,r*2,r*2);GC[k]=o}return GC[k]}
+function along(pts,sp){const o=[];let lft=0;for(let i=0;i<pts.length-1;i++){const a=pts[i],b=pts[i+1],ax=a.x*W,ay=a.y*H,dx=b.x*W-ax,dy=b.y*H-ay,L=Math.hypot(dx,dy);if(!L)continue;
+  let d=lft;while(d<=L){o.push({x:(ax+dx*d/L)/W,y:(ay+dy*d/L)/H,t:0,a:0});d+=sp}lft=d-L}return o}
+const pt=e=>({x:e.clientX/W,y:e.clientY/H});
+function finish(){if(cur&&cur.pts.length>=2){const L=along(cur.pts,+$('sp').value);if(L.length>1)strands.push({L,type:$('ltype').value,mode:$('mode').value,inv:$('inv').checked,bin:$('bin').checked,alt:$('alt').checked,c:0,ph:Math.random()*6})}cur=null;$('done').style.display='none'}
+cv.addEventListener('pointerdown',e=>{if(e.button==2)return;const p=pt(e);if(!cur){cur={pts:[p]};$('done').style.display='block'}else cur.pts.push(p);mouse=p});
+cv.addEventListener('pointermove',e=>mouse=pt(e));
+cv.addEventListener('dblclick',finish);cv.addEventListener('contextmenu',e=>{e.preventDefault();finish()});$('done').onclick=finish;
+addEventListener('keydown',e=>{if(e.key=='Enter')finish();else if(e.key=='Escape'){cur=null;$('done').style.display='none'}
+  else if((e.ctrlKey||e.metaKey)&&e.key=='z')strands.pop();else if(e.key=='h'||e.key=='H')$('panel').classList.toggle('hide')});
+$('undo').onclick=()=>strands.pop();$('clear').onclick=()=>{strands=[];cur=null;$('done').style.display='none'};
+$('fs').onclick=()=>document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
+function zap(s,i,a,d,now){const l=s.L[i];if(l){l.t=now+d;l.a=a}}
+function trig(e,now){const wave=$('wave').value/1000;for(const s of strands){const md=s.mode,n=s.L.length,v=.55+.45*e.v;
+  if(e.dr?(md!='any'&&md!='drums'):(md=='drums'||(md=='low'&&e.m>=60)||(md=='mid'&&(e.m<60||e.m>71))||(md=='high'&&e.m<72)||(md[0]=='t'&&+md.slice(1)!=e.tr)))continue;
+  if(md=='pitch'){const i=Math.round((e.m-song.lo)/((song.hi-song.lo)||1)*(n-1));zap(s,i,v,0,now);zap(s,i-1,v*.35,0,now);zap(s,i+1,v*.35,0,now)}
+  else if(md=='chase')zap(s,s.c++%n,v,0,now);
+  else for(let i=0;i<n;i++)zap(s,i,v,i*wave,now)}}
+function lamp(s,l,i,now,tau){let r;
+  if(playing){r=now>=l.t?l.a*Math.exp(-(now-l.t)/tau):0;if(s.bin)r=r>.2?1:0;if(s.inv)r=1-r;if(s.alt&&i%2)r=1-r}
+  else r=.3+.25*Math.sin(now*2.2+i*1.7+s.ph);
+  const cs=LT[s.type][1],c=cs[i%cs.length];if(r>.04)x.drawImage(glow(c,Math.floor(r*8)),l.x*W-10-Math.floor(r*8)*5,l.y*H-10-Math.floor(r*8)*5);
+  x.globalAlpha=.4+r*.6;x.fillStyle=c;x.beginPath();x.arc(l.x*W,l.y*H,1.5+r*2.5,0,7);x.fill();x.globalAlpha=1}
+function frame(){const now=performance.now()/1000,tau=+$('fade').value;
+  if(A&&playing){const lat=A.outputLatency||A.baseLatency||0;while(q.length&&q[0].t<=A.currentTime-lat)trig(q.shift().e,now)}
+  if(song&&!seeking&&A)$('bar').value=Math.min(song.len,curB());
+  x.setTransform(DPR,0,0,DPR,0,0);x.clearRect(0,0,W,H);x.globalCompositeOperation='lighter';
+  for(const s of strands)s.L.forEach((l,i)=>lamp(s,l,i,now,tau));
+  if(cur&&mouse){const L=along(cur.pts.concat(mouse),+$('sp').value);x.fillStyle='#fff';x.globalAlpha=.5;L.forEach(l=>{x.beginPath();x.arc(l.x*W,l.y*H,3,0,7);x.fill()});x.globalAlpha=1}
+  x.globalCompositeOperation='source-over';requestAnimationFrame(frame)}
 
-    lightTypeKeys.forEach(key => {
-        const option = document.createElement('option');
-        option.value = key;
-        option.textContent = LIGHT_TYPES[key].name;
-        lightTypeSelect.appendChild(option);
-    });
+/* panel auto-hide */
+let hideT;function awake(){$('panel').classList.remove('hide');clearTimeout(hideT);hideT=setTimeout(()=>{if(!$('panel').matches(':hover')&&!$('panel').contains(document.activeElement))$('panel').classList.add('hide')},6000)}
+['pointermove','pointerdown','keydown'].forEach(t=>addEventListener(t,awake));awake();
 
-    // Fixed Glow Cache — now truly transparent circles
-    const GLOW_LEVELS = 8;
-    const glowCache = {};
-    function createGlow(radius, color) {
-        const offscreen = document.createElement('canvas');
-        offscreen.width = offscreen.height = radius * 2;
-        const gctx = offscreen.getContext('2d');
-
-        const grad = gctx.createRadialGradient(radius, radius, 0, radius, radius, radius);
-        grad.addColorStop(0, color);
-        grad.addColorStop(0.2, color.slice(0,7) + '44');
-        grad.addColorStop(0.3, color.slice(0,7) + '11');
-        grad.addColorStop(1, color.slice(0,7) + '00');
-        gctx.fillStyle = grad;
-        gctx.beginPath();
-        gctx.arc(radius, radius, radius, 0, Math.PI * 2);
-        gctx.fill();
-
-        return offscreen;
-    }
-    function getGlow(color, level) {
-        const key = `${color}-${level}`;
-        if (!glowCache[key]) {
-            const radius = 10 + level * 5;
-            glowCache[key] = createGlow(radius, color);
-        }
-        return glowCache[key];
-    }
-
-    function resize() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resize);
-    resize();
-
-    function resetAutoHide() {
-        clearTimeout(autoHideTimer);
-        controls.classList.remove('hidden');
-        autoHideTimer = setTimeout(() => controls.classList.add('hidden'), 5000);
-    }
-    document.addEventListener('mousemove', resetAutoHide);
-    document.addEventListener('touchstart', resetAutoHide);
-    document.addEventListener('click', resetAutoHide);
-    resetAutoHide();
-
-    fullscreenBtn.addEventListener('click', () => {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen();
-        } else {
-            document.exitFullscreen();
-        }
-    });
-
-    imageInput.addEventListener('change', e => {
-        const file = e.target.files[0];
-        if (file) {
-            bgImage.src = URL.createObjectURL(file);
-            strands = [];
-            drawIdle();
-        }
-    });
-
-    audioInput.addEventListener('change', e => {
-        playlist = Array.from(e.target.files);
-        playlistDiv.innerHTML = '';
-        playlist.forEach((file, i) => {
-            const item = document.createElement('div');
-            item.className = 'playlist-item';
-            item.textContent = file.name.slice(0, 35) + (file.name.length > 35 ? '...' : '');
-            item.onclick = () => playSong(i);
-            playlistDiv.appendChild(item);
-        });
-        if (playlist.length) playSong(0);
-    });
-
-    function playSong(index) {
-        currentSongIndex = index;
-        audio.src = URL.createObjectURL(playlist[index]);
-        audio.play();
-        document.querySelectorAll('.playlist-item').forEach((el, i) => el.classList.toggle('playing', i === index));
-    }
-
-    audio.addEventListener('ended', () => {
-        if (currentSongIndex < playlist.length - 1) {
-            playSong(currentSongIndex + 1);
-        } else {
-            playSong(0); //Loop
-        }
-    });
-
-    audio.addEventListener('play', () => { isPlaying = true; if (!audioCtx) initAudio(); draw(); });
-    audio.addEventListener('pause', () => { isPlaying = false; drawIdle(); });
-
-    lightTypeSelect.addEventListener('change', () => currentType = lightTypeSelect.value);
-    frequencySelect.addEventListener('change', () => currentFreq = frequencySelect.value);
-
-    clearAllBtn.addEventListener('click', () => { 
-        strands = []; 
-        activeStrand = null;
-        clicking = false;
-        tempStart = null;
-        previewStrand = null;
-    });
-
-    canvas.addEventListener('click', e => {
-        resetAutoHide();
-        const x = e.clientX;
-        const y = e.clientY;
-
-        if (!clicking) {
-            // Starting a new strand
-            activeStrand = {
-                lights: [{ x, y }],
-                type: lightTypeSelect.value,
-                freq: frequencySelect.value,
-                isInverted:    isInvertedToggle.checked,
-                isBinary:      isBinaryToggle.checked,
-                isInvertedOdd: isInvertedOddToggle.checked
-            };
-            strands.push(activeStrand);
-
-            tempStart = { x, y };
-            clicking = true;
-            previewStrand = [];
-        } else {
-            // Finishing current segment
-            if (previewStrand && previewStrand.length > 0) {
-                // Add all preview lights EXCEPT the first (already added as waypoint)
-                for (let i = 1; i < previewStrand.length; i++) {
-                    activeStrand.lights.push(previewStrand[i]);
-                }
-            }
-
-            // Continue chaining: prepare for next segment from the last point
-            if (activeStrand.lights.length > 0) {
-                const last = activeStrand.lights[activeStrand.lights.length - 1];
-                tempStart = { x: last.x, y: last.y };
-                previewStrand = [];
-                // clicking remains true → continues placement on this strand
-            } else {
-                clicking = false;
-            }
-        }
-    });
-
-    function cancelPlacement() {
-        if (clicking && activeStrand) {
-            // If strand has only the starting point (or very few), remove it completely
-            if (activeStrand.lights.length <= 2) {
-                strands = strands.filter(s => s !== activeStrand);
-            }
-            // Always reset placement state
-            clicking = false;
-            tempStart = null;
-            previewStrand = null;
-            activeStrand = null;
-        }
-    };
-
-    canvas.addEventListener('contextmenu', e => {
-        e.preventDefault(); // Prevent context menu from appearing
-        cancelPlacement()
-    });
-
-    window.addEventListener('keydown', e => {
-        if (e.key === 'Escape' || e.key === 'Esc') {
-            cancelPlacement()
-        }
-    });
-
-    canvas.addEventListener('mousemove', e => {
-        if (!clicking || !tempStart || !activeStrand) {
-            previewStrand = null;
-            return;
-        }
-
-        const x = e.clientX;
-        const y = e.clientY;
-        const dx = x - tempStart.x;
-        const dy = y - tempStart.y;
-        const length = Math.hypot(dx, dy);
-        const numLights = Math.max(3, Math.floor(length / LIGHT_SPACING) + 1);
-
-        previewStrand = [];
-        // Include starting point for visual connection
-        previewStrand.push({ x: tempStart.x, y: tempStart.y });
-
-        for (let i = 1; i < numLights; i++) {
-            const t = i / (numLights - 1);
-            previewStrand.push({
-                x: tempStart.x + t * dx,
-                y: tempStart.y + t * dy
-            });
-        }
-    });
-
-    let audioCtx, analyser, dataArray;
-    function initAudio() {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 512;
-        dataArray = new Uint8Array(analyser.frequencyBinCount);
-        const source = audioCtx.createMediaElementSource(audio);
-        source.connect(analyser);
-        analyser.connect(audioCtx.destination);
-    }
-
-    function getFrequencyValue(freqType) {
-        if (!analyser) return 0;
-        analyser.getByteFrequencyData(dataArray);
-        const len = dataArray.length;
-        let sum = 0, count = 0;
-
-        if (freqType === 'bass') {
-            sum = dataArray.slice(0, 15).reduce((a, b) => a + b, 0);
-            count = 15;
-        } else if (freqType === 'mid') {
-            sum = dataArray.slice(15, 80).reduce((a, b) => a + b, 0);
-            count = 65;
-        } else if (freqType === 'treble') {
-            sum = dataArray.slice(80).reduce((a, b) => a + b, 0);
-            count = len - 80;
-        } else { // volume
-            sum = dataArray.reduce((a, b) => a + b, 0);
-            count = len;
-        }
-
-        return (sum / count) / 255;
-    }
-
-    function getLightColor(type, index) {
-            const typeConfig = LIGHT_TYPES[type];
-            if (!typeConfig) return '#ffffff'; // fallback
-
-            const colors = typeConfig.colors;
-
-            // Single-color types (like warmwhite, coolwhite)
-            if (colors.length === 1) {
-                return colors[0];
-            }
-
-            // Alternating (redgreen) or cycling (multicolor)
-            return colors[index % colors.length];
-        }
-
-    function drawIdle() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        strands.forEach(strand => {
-            strand.lights.forEach((light, i) => {
-                const color = getLightColor(strand.type, i);
-                ctx.fillStyle = color;
-                ctx.globalAlpha = 0.8;
-                ctx.beginPath();
-                ctx.arc(light.x, light.y, 2, 0, Math.PI*2);
-                ctx.fill();
-            });
-        });
-
-        //draw preview if we're actively placing a strand
-        drawPreview();
-        requestAnimationFrame(drawIdle);
-    }
-
-    function drawPreview() {
-        if (clicking && previewStrand && previewStrand.length > 0) {
-            previewStrand.forEach((light, i) => {
-                const color = getLightColor(currentType, i);
-                
-                // Semi-transparent bulbs for preview
-                ctx.globalAlpha = 0.5;
-                ctx.fillStyle = color;
-                ctx.beginPath();
-                ctx.arc(light.x, light.y, 3, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Optional: faint connecting line
-                if (i > 0) {
-                    ctx.globalAlpha = 0.3;
-                    ctx.strokeStyle = color;
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.moveTo(previewStrand[i-1].x, previewStrand[i-1].y);
-                    ctx.lineTo(light.x, light.y);
-                    ctx.stroke();
-                }
-            });
-        ctx.globalAlpha = 1.0;  // Always reset
-        }
-    }
-
-    function getModifiedIntensity(strand, lightIndex, baseIntensity) {
-        let intensity = baseIntensity;
-
-        // Binary mode: lights are either fully on or fully off
-        if (strand.isBinary) {
-            intensity = intensity > 0.4 ? 1 : 0; // threshold to avoid faint lights
-        }
-
-        // Invert
-        if (strand.isInverted) {
-                intensity = 1 - intensity; // invert: high → low, low → high
-        }
-
-        // Invert only odd-indexed lights
-        if (strand.isInvertedOdd) {
-            if (lightIndex % 2 === 1) {
-               intensity = 1 - intensity;
-            }
-        }
-
-    return intensity;
-}
-
-    function draw() {
-        if (!isPlaying) return;
-
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.globalCompositeOperation = 'lighter';
-
-        strands.forEach(strand => {
-            const baseIntensity = getFrequencyValue(strand.freq);
-
-            strand.lights.forEach((light, i) => {
-                const color = getLightColor(strand.type, i);
-                const intensity = getModifiedIntensity(strand, i, baseIntensity);
-                const level = Math.floor(intensity * GLOW_LEVELS);
-                const glowCanvas = getGlow(color, level);
-                ctx.drawImage(glowCanvas, light.x - glowCanvas.width/2, light.y - glowCanvas.height/2);
-
-                // Bright core
-                ctx.fillStyle = color;
-                ctx.globalAlpha = 0.4 + intensity * 0.6;
-                ctx.beginPath();
-                ctx.arc(light.x, light.y, 1 + intensity, 0, Math.PI*2);
-                ctx.fill();
-            });
-        });
-
-        //draw preview if we're actively placing a strand
-        drawPreview();
-
-        ctx.globalCompositeOperation = 'source-over';
-        requestAnimationFrame(draw);
-    }
-
-    drawIdle();
+song=songs[0];buildTracks();renderList();$('bar').max=song.len;setBg(scene(0),true);frame();
 </script>
 </body>
 </html>
