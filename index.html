@@ -25,7 +25,10 @@ label.r input[type=range]{flex:1}
 label.r span{width:70px}
 .tg{display:flex;gap:12px;flex-wrap:wrap;margin:6px 0}.tg label{display:flex;gap:5px;align-items:center}
 #list{max-height:130px;overflow-y:auto;background:#0a0f0d;border-radius:6px;padding:4px}
-#list div{padding:6px 8px;border-radius:4px;cursor:pointer}
+#list div{padding:4px 6px;border-radius:4px;display:flex;gap:3px;align-items:center}
+#list span{flex:1;cursor:pointer;padding:2px 2px}
+#list button{width:auto;margin:0;padding:2px 7px}
+#list .empty{color:var(--mute)}
 #list div.on{background:#1d5b43}
 #list small{display:block;color:var(--mute)}
 #done{position:absolute;right:14px;bottom:14px;z-index:4;width:auto;padding:10px 18px;background:var(--red);display:none}
@@ -49,6 +52,7 @@ a{color:#ffd9a0}
   <h2>Music (MIDI)</h2>
   <div id="list"></div>
   <input type="file" id="midIn" accept=".mid,.midi,audio/midi" multiple aria-label="Add MIDI files">
+  <div class="row"><button id="defs">Restore defaults</button><button id="empty">Clear playlist</button></div>
   <div class="row"><button id="prev" aria-label="Previous">⏮</button><button id="pp">▶ Play</button><button id="next" aria-label="Next">⏭</button></div>
   <input type="range" id="bar" min="0" max="1" step="0.01" value="0" aria-label="Song position">
   <label class="r"><span>Tempo</span><input type="range" id="tempo" min=".5" max="1.6" step=".05" value="1"></label>
@@ -93,6 +97,7 @@ function scene(k){
   const r=rng(k*97+13),sky=[['#0b1d3a','#3b3a73'],['#0d0d2b','#2a1f4f'],['#10253f','#7a5580'],['#02121f','#0f4c4a']][k];
   let s=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${sky[0]}"/><stop offset="1" stop-color="${sky[1]}"/></linearGradient><linearGradient id="a" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5dffb0" stop-opacity="0"/><stop offset=".5" stop-color="#5dffb0" stop-opacity=".45"/><stop offset="1" stop-color="#5d8bff" stop-opacity="0"/></linearGradient></defs><rect width="1600" height="900" fill="url(#g)"/>`;
   for(let i=0;i<90;i++)s+=`<circle cx="${r()*1600|0}" cy="${r()*520|0}" r="${.5+r()*1.6}" fill="#fff" opacity="${.3+r()*.7}"/>`;
+  for(let i=0;i<110;i++)s+=`<circle cx="${r()*1600|0}" cy="${r()*700|0}" r="${1+r()*2.2}" fill="#fff" opacity=".7"/>`;
   if(k<3)s+=`<circle cx="${k==1?260:1250}" cy="150" r="58" fill="#fdf3c8"/>`;
   if(k==3){for(let i=0;i<4;i++)s+=`<ellipse cx="${300+i*330}" cy="${230+r()*60}" rx="260" ry="${90+r()*70}" fill="url(#a)" transform="rotate(${-12+i*8} ${300+i*330} 250)"/>`;
     s+=`<path d="M0 640L260 430L430 560L700 330L980 580L1220 410L1600 620V900H0Z" fill="#0b2a38"/><path d="M700 330L640 400L700 380L760 410ZM260 430L215 480L260 465L300 490ZM1220 410L1170 470L1220 450L1270 480Z" fill="#e8f4ff"/>`}
@@ -106,7 +111,6 @@ function scene(k){
   if(k==2){for(let i=0;i<6;i++){const hx=40+i*260,hh=180+r()*120,w=210;s+=`<rect x="${hx}" y="${730-hh}" width="${w}" height="${hh}" fill="${['#5a3a52','#3d4f6b','#6b4a3a','#4a5f4f'][i%4]}"/><path d="M${hx-14} ${730-hh}L${hx+w/2} ${730-hh-110}L${hx+w+14} ${730-hh}Z" fill="#f4f8fb"/>`;
       for(let j=0;j<2;j++)s+=`<rect x="${hx+30+j*100}" y="${730-hh+30}" width="50" height="60" fill="#ffcf70"/>`;s+=`<rect x="${hx+w/2-22}" y="${690}" width="44" height="60" fill="#2b1810"/>`}}
   if(k==3)[100,240,1360,1500,700,900].forEach((q,i)=>s+=fir(q,760,170+i%3*50,'#06241e'));
-  for(let i=0;i<110;i++)s+=`<circle cx="${r()*1600|0}" cy="${r()*900|0}" r="${1+r()*2.2}" fill="#fff" opacity=".7"/>`;
   return'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s+'</svg>')}
 function setBg(src,keep){$('bg').src=src;if(!keep)strands=[]}
 document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>setBg(scene(+b.dataset.s)));
@@ -137,6 +141,7 @@ build({t:'Silent Night',by:'F. Gruber, 1818 · public domain',bpm:76,bpb:3,
  ch:'C C C C G G C C F F C C F F C C G G C C C G C'}),
 build({t:'Twinkle Sweep (original demo)',by:'Written for this page · CC0',bpm:132,bpb:4,jg:1,mel:sw.join(' '),ch:'C Am F G C Am F G'})
 ];
+const DEFAULTS=songs.slice();
 
 /* ---------- MIDI file parser ---------- */
 const kindOf=p=>p<8?'soft':p<16?'bell':p<24?'organ':p<32?'soft':p<40?'bass':p<56?'pad':p<80?'organ':p<96?'pad':'bell';
@@ -158,7 +163,7 @@ function parseMidi(buf,name){
     p=end}
   if(!ev.length)throw new Error('No notes found');
   ev.sort((a,b)=>a.b-b.b);return fin({title:name.replace(/\.midi?$/i,''),by:'Your MIDI file',bpm:Math.min(240,Math.max(30,bpm)),ev,len:Math.max(...ev.map(e=>e.b+e.d))+1,trk})}
-async function addMidi(f){try{songs.push(parseMidi(await f.arrayBuffer(),f.name));renderList();if(!playing&&songs.length)load(songs.length-1,true)}catch(e){alert(f.name+': '+e.message)}}
+async function addMidi(f){try{songs.push(parseMidi(await f.arrayBuffer(),f.name));renderList();if(!song)load(songs.length-1,true)}catch(e){alert(f.name+': '+e.message)}}
 $('midIn').onchange=e=>[...e.target.files].forEach(addMidi);
 addEventListener('dragover',e=>e.preventDefault());
 addEventListener('drop',e=>{e.preventDefault();[...e.dataTransfer.files].forEach(f=>/\.midi?$/i.test(f.name)?addMidi(f):/^image\//.test(f.type)&&setBg(URL.createObjectURL(f)))});
@@ -194,13 +199,24 @@ function sched(){const now=A.currentTime,hor=now+.2;
   while(evI<song.ev.length){const e=song.ev[evI],t=base.t+(e.b-base.b)*spb();if(t>hor)break;
     if(t>=now-.05){const tt=Math.max(t,now);e.dr?drum(e.m,tt,e.v):voice(e.k,e.m,tt,e.d*spb(),e.v);q.push({t:tt,e})}evI++}
   if(evI>=song.ev.length&&curB()>song.len)load((si+1)%songs.length)}
-$('pp').onclick=()=>{if(playing)pause();else{if(!song)load(0);else start(pausedB)}};
-$('next').onclick=()=>load((si+1)%songs.length);$('prev').onclick=()=>load((si+songs.length-1)%songs.length);
+$('pp').onclick=()=>{if(playing)pause();else{if(!song){if(songs.length)load(0)}else start(pausedB)}};
+$('next').onclick=()=>songs.length&&load((si+1)%songs.length);$('prev').onclick=()=>songs.length&&load((si+songs.length-1)%songs.length);
 $('tempo').oninput=e=>{if(playing){base={b:curB(),t:A.currentTime}}tempo=+e.target.value};
 $('vol').oninput=e=>{if(master)master.gain.value=+e.target.value};
 $('bar').onpointerdown=()=>seeking=true;
 $('bar').onchange=e=>{seeking=false;const b=+e.target.value;q=[];if(playing)start(b);else pausedB=b};
-function renderList(){const L=$('list');L.innerHTML='';songs.forEach((s,i)=>{const d=document.createElement('div');d.className=i==si&&song?'on':'';d.innerHTML=`${s.title.replace(/</g,'&lt;')}<small>${s.by.replace(/</g,'&lt;')}</small>`;d.onclick=()=>load(i);L.appendChild(d)})}
+function clearSong(){pause();song=null;q=[];si=0;$('trk').innerHTML='';$('bar').max=1;$('bar').value=0}
+function move(i,d){const j=i+d;if(j<0||j>=songs.length)return;[songs[i],songs[j]]=[songs[j],songs[i]];si=songs.indexOf(song);renderList()}
+function remove(i){const was=songs[i]===song;songs.splice(i,1);
+  if(!songs.length)clearSong();else if(was)load(Math.min(i,songs.length-1),!playing);else si=songs.indexOf(song);renderList()}
+function renderList(){const L=$('list');L.innerHTML='';
+  if(!songs.length){L.innerHTML='<div class="empty">Playlist is empty. Add MIDI files or restore the defaults.</div>';return}
+  songs.forEach((s,i)=>{const d=document.createElement('div'),t=document.createElement('span');d.className=s===song?'on':'';
+    t.innerHTML=`${s.title.replace(/</g,'&lt;')}<small>${s.by.replace(/</g,'&lt;')}</small>`;t.onclick=()=>load(i);d.appendChild(t);
+    [['▲','Move up',()=>move(i,-1)],['▼','Move down',()=>move(i,1)],['✕','Remove',()=>remove(i)]].forEach(([c,l,f])=>{const b=document.createElement('button');b.textContent=c;b.title=b.ariaLabel=l+' '+s.title;b.onclick=f;d.appendChild(b)});
+    L.appendChild(d)})}
+$('defs').onclick=()=>{DEFAULTS.forEach(d=>songs.includes(d)||songs.push(d));if(!song)load(0,true);renderList()};
+$('empty').onclick=()=>{songs.length=0;clearSong();renderList()};
 function buildTracks(){const g=$('trk');g.innerHTML='';song.trk.forEach((n,i)=>g.appendChild(new Option(n,'t'+i)))}
 
 /* ---------- Lights ---------- */
